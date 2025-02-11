@@ -1,3 +1,58 @@
+A custom iperf 
+================================================================
+This repository is a fork of the original iperf maintained by esnet: https://github.com/esnet/iperf
+
+Any change made to the repository is marked similar to this:
+
+    //[HEMA]====...
+    [...]
+    //==========...
+
+
+Therefore, a simple
+
+    grep -r HEMA
+
+will show all changes made from the original repository.
+
+Some features have been added to aid my personal research.
+
+NAPI ID Support
+---------------
+This feature adds the information "napi_id" to the JSON output when running iperf.
+The NAPI ID is reported for every stream in the intervals output.
+If the NAPI ID cannot be retrieved, the value in the JSON is set to the negative return value of getsockopt. This will also print a message to stderr.
+
+This information is helpful because it can provide insights into which connections are mapped to the same RX queue.
+Each RX queue has a unique NAPI ID.
+If the napi ID of two connections is the same, they were received by the same RX queue.
+There is no way - to my knowledge - of mapping the NAPI ID to RX queue ids. 
+It is only guaranteed that the IDs are assigned in ascending order.
+If you have Rx queues 0, 1, 2, and 3 for example, they will be mapped to NAPI IDs like 8234, 8235, 8236, 8237.
+Whether this behavior is stable, I do not know.
+
+The iperf implementation does not make any necessary checks on whether your kernel supports the SO_INCOMING_NAPI_ID.
+It is supported since Linux 4.12 according to https://man7.org/linux/man-pages/man7/socket.7.html .
+
+
+Server RX Packet Timestamps (Work in Progress)
+---------------------------
+
+This introduces a new flag:
+
+    --server-rx-timestamp        Activate RX timestamp collection on server
+
+As the description says, it activates timestamping RX timestamps using SOF_TIMESTAMPING_RX_SOFTWARE.
+These timestamps are taken just before a packet enters the network stack (Check for net_timestamp_check() in your kernel for the exact positions).
+
+More on timestamping: https://docs.kernel.org/networking/timestamping.html
+
+So far, the timestamps are not yet collected. Work in Progress.
+
+
+
+
+
 iperf3:  A TCP, UDP, and SCTP network bandwidth measurement tool
 ================================================================
 
