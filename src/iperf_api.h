@@ -101,6 +101,11 @@ typedef atomic_uint_fast64_t atomic_iperf_size_t;
 #define OPT_JSON_STREAM 28
 #define OPT_SND_TIMEOUT 29
 #define OPT_USE_PKCS1_PADDING 30
+//[HEMA]===========
+#define OPT_SERVER_RX_TS 31
+//=================
+
+
 
 /* states */
 #define TEST_START 1

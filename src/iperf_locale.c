@@ -153,7 +153,10 @@ const char usage_longstr[] = "Usage: iperf3 [-s|-c host] [options]\n"
                            "                            and client during the authentication process\n"
                            "  --use-pkcs1-padding       use pkcs1 padding at your own risk\n"
 #endif //HAVE_SSL
-                           "Client specific:\n"
+                          //[HEMA]============
+                           "  --server-rx-timestamp     Activate RX timestamp collection on server\n"
+                           //=====================
+						   "Client specific:\n"
                            "  -c, --client <host>[%%<dev>] run in client mode, connecting to <host>\n"
                            "                              (option <dev> equivalent to `--bind-dev <dev>`)\n"
 #if defined(HAVE_SCTP_H)

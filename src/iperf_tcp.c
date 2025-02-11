@@ -45,6 +45,13 @@
 #include "net.h"
 #include "cjson.h"
 
+
+//[HEMA]=========
+#include <linux/net_tstamp.h>
+//===============
+
+
+
 #if defined(HAVE_FLOWLABEL)
 #include "flowlabel.h"
 #endif /* HAVE_FLOWLABEL */
@@ -143,6 +150,27 @@ iperf_tcp_accept(struct iperf_test * test)
 	}
     }
 #endif /* HAVE_SO_MAX_PACING_RATE */
+
+
+	//[HEMA]=============
+	if(test->srv_rx_ts){
+
+		int ts;
+
+		ts = SOF_TIMESTAMPING_RX_SOFTWARE;
+
+		if (test->debug) {
+			printf("Enabling RX Timestamps on new connection\n");
+		}
+		if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPING_NEW, &ts, sizeof(ts)) < 0) {
+
+			warning("Unable to set RX timestamping");
+		}
+
+
+	}
+	//===================
+
 
     if (Nread(s, cookie, COOKIE_SIZE, Ptcp) < 0) {
         i_errno = IERECVCOOKIE;

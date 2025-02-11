@@ -1152,6 +1152,9 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
 #if defined(HAVE_IPPROTO_MPTCP)
         {"mptcp", no_argument, NULL, 'm'},
 #endif
+//[HEMA]===========
+        {"server-rx-timestamp", no_argument, NULL, OPT_SERVER_RX_TS},
+//=================
         {"debug", optional_argument, NULL, 'd'},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0}
@@ -1656,6 +1659,12 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
 		test->mptcp = 1;
 		break;
 #endif
+//[HEMA]================
+        case OPT_SERVER_RX_TS:
+            test->srv_rx_ts = 1;
+            break;
+//======================
+
 	    case 'h':
 		usage_long(stdout);
 		exit(0);
@@ -4188,6 +4197,8 @@ iperf_print_results(struct iperf_test *test)
                 } else {
                     /* Summary sum, TCP without retransmits. */
                     if (test->json_output)
+
+
                         cJSON_AddItemToObject(test->json_end, sum_sent_name, iperf_json_printf("start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f sender: %b", (double) start_time, (double) sender_time, (double) sender_time, (int64_t) total_sent, bandwidth * 8, stream_must_be_sender));
                     else
                         if (test->role == 's' && !stream_must_be_sender) {
@@ -4453,12 +4464,21 @@ print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *
 	    else {
 		unit_snprintf(cbuf, UNIT_LEN, irp->snd_cwnd, 'A');
 		iperf_printf(test, report_bw_retrans_cwnd_format, sp->socket, mbuf, st, et, ubuf, nbuf, irp->interval_retrans, cbuf, irp->omitted?report_omitted:"");
-	    }
+		}
 	} else {
-	    /* Interval, TCP without retransmits. */
-	    if (test->json_output)
-		cJSON_AddItemToArray(json_interval_streams, iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  omitted: %b sender: %b", (int64_t) sp->socket, (double) st, (double) et, (double) irp->interval_duration, (int64_t) irp->bytes_transferred, bandwidth * 8, irp->omitted, sp->sender));
-	    else
+		/* Interval, TCP without retransmits. */
+		if (test->json_output){
+			//==========[HEMA]========//
+			//  Adjusting Json print  //
+			int napi_id = 0;
+			socklen_t len = sizeof(socklen_t);
+			int ret = getsockopt(sp->socket, SOL_SOCKET, SO_INCOMING_NAPI_ID, &napi_id, &len);
+			cJSON_AddItemToArray(json_interval_streams, iperf_json_printf("socket: %d napi_id: %d start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  omitted: %b sender: %b", (int64_t) sp->socket, (ret < 0)?-ret :napi_id, (double) st, (double) et, (double) irp->interval_duration, (int64_t) irp->bytes_transferred, bandwidth * 8, irp->omitted, sp->sender));
+			//cJSON_AddItemToArray(json_interval_streams, iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  omitted: %b sender: %b", (int64_t) sp->socket, (double) st, (double) et, (double) irp->interval_duration, (int64_t) irp->bytes_transferred, bandwidth * 8, irp->omitted, sp->sender));
+			//========================//
+
+
+		}else
 		iperf_printf(test, report_bw_format, sp->socket, mbuf, st, et, ubuf, nbuf, irp->omitted?report_omitted:"");
 	}
     } else {

@@ -354,6 +354,10 @@ struct iperf_test
     int       timestamps;			/* --timestamps */
     char     *timestamp_format;
     int       mptcp;				/* -m, --mptcp */
+	 //[HEMA]=========
+    int       srv_rx_ts;
+    //===============
+
 
     char     *json_output_string; /* rendered JSON output if json_output is set */
     /* Select related parameters */
