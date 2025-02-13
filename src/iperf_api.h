@@ -381,6 +381,10 @@ int iperf_clearaffinity(struct iperf_test *);
 /* Custom printf routine. */
 int iperf_printf(struct iperf_test *test, const char *format, ...) __attribute__ ((format(printf,2,3)));
 int iflush(struct iperf_test *test);
+//[HEMA]================
+int print_histogram(struct iperf_test *test, struct iperf_stream *sp);
+//====================
+
 
 /* Error routines. */
 void iperf_err(struct iperf_test *test, const char *format, ...) __attribute__ ((format(printf,2,3)));
@@ -494,6 +498,9 @@ enum {
     /* Timer errors */
     IENEWTIMER = 300,       // Unable to create new timer (check perror)
     IEUPDATETIMER = 301,    // Unable to update timer (check perror)
+    //[HEMA]=======
+    IERXTS = 302            // Unable to setup histogram due to faulty input
+    //==============
 };
 
 

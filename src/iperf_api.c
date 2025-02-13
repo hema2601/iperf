@@ -1153,7 +1153,7 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
         {"mptcp", no_argument, NULL, 'm'},
 #endif
 //[HEMA]===========
-        {"server-rx-timestamp", no_argument, NULL, OPT_SERVER_RX_TS},
+        {"server-rx-timestamp", required_argument, NULL, OPT_SERVER_RX_TS},
 //=================
         {"debug", optional_argument, NULL, 'd'},
         {"help", no_argument, NULL, 'h'},
@@ -1661,7 +1661,34 @@ iperf_parse_arguments(struct iperf_test *test, int argc, char **argv)
 #endif
 //[HEMA]================
         case OPT_SERVER_RX_TS:
+
             test->srv_rx_ts = 1;
+			struct protocol *tcp = get_protocol(test, Ptcp);
+			tcp->recv = iperf_tcp_recvmsg;
+
+            //[TODO] Make this info be passed as argument
+            test->bins =   strtol(optarg, &endptr, 0);
+            if (endptr == optarg) {
+                i_errno = IERXTS;
+                return -1;
+            }
+		    comma = strchr(optarg, ',');
+            if (comma == NULL) {
+                i_errno = IERXTS;
+                return -1;
+            }
+            test->bin_granularity = atoi(comma+1);
+            
+            if (test-> bin_granularity == 0 || test->bins == 0 ) {
+                i_errno = IERXTS;
+                return -1;
+            }
+            test->histo_limits = (unsigned int*)malloc(sizeof(unsigned int) * (test->bins-1));
+
+            for(int i = 0; i < test->bins - 1; i++){
+                test->histo_limits[i] = (i+1) * test->bin_granularity;
+            }
+
             break;
 //======================
 
@@ -2081,6 +2108,7 @@ iperf_send_mt(struct iperf_stream *sp)
 int
 iperf_recv_mt(struct iperf_stream *sp)
 {
+	
     int r;
     struct iperf_test *test = sp->test;
 
@@ -2096,7 +2124,6 @@ iperf_recv_mt(struct iperf_stream *sp)
 	        test->bytes_received += r;
 	        ++test->blocks_received;
             }
-
     return 0;
 }
 
@@ -3773,9 +3800,11 @@ iperf_print_intermediate(struct iperf_test *test)
                         /* Interval sum, TCP without retransmits. */
                         if (test->json_output)
                             cJSON_AddItemToObject(json_interval, sum_name, iperf_json_printf("start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f  omitted: %b sender: %b", (double) start_time, (double) end_time, (double) irp->interval_duration, (int64_t) bytes, bandwidth * 8, test->omitting, stream_must_be_sender));
-                        else
+                        else{
                             iperf_printf(test, report_sum_bw_format, mbuf, start_time, end_time, ubuf, nbuf, test->omitting?report_omitted:"");
-                    }
+                            
+                        }
+                        }
                 } else {
                     /* Interval sum, UDP. */
                     if (stream_must_be_sender) {
@@ -4117,6 +4146,7 @@ iperf_print_results(struct iperf_test *test)
                         }
                         else {
                             iperf_printf(test, report_bw_format, sp->socket, mbuf, start_time, receiver_time, ubuf, nbuf, report_receiver);
+                            print_histogram(test, sp);
                         }
                 }
                 else {
@@ -4200,7 +4230,7 @@ iperf_print_results(struct iperf_test *test)
 
 
                         cJSON_AddItemToObject(test->json_end, sum_sent_name, iperf_json_printf("start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f sender: %b", (double) start_time, (double) sender_time, (double) sender_time, (int64_t) total_sent, bandwidth * 8, stream_must_be_sender));
-                    else
+                    else{
                         if (test->role == 's' && !stream_must_be_sender) {
                             if (test->verbose)
                                 iperf_printf(test, report_sender_not_available_summary_format, "SUM");
@@ -4208,6 +4238,7 @@ iperf_print_results(struct iperf_test *test)
                         else {
                             iperf_printf(test, report_sum_bw_format, mbuf, start_time, sender_time, ubuf, nbuf, report_sender);
                         }
+                    }
                 }
                 unit_snprintf(ubuf, UNIT_LEN, (double) total_received, 'A');
                 /* If no tests were run, set received bandwidth to 0 */
@@ -4478,9 +4509,10 @@ print_interval_results(struct iperf_test *test, struct iperf_stream *sp, cJSON *
 			//========================//
 
 
-		}else
+		}else{
 		iperf_printf(test, report_bw_format, sp->socket, mbuf, st, et, ubuf, nbuf, irp->omitted?report_omitted:"");
-	}
+	    }
+    }
     } else {
 	/* Interval, UDP. */
 	if (sp->sender) {
@@ -4511,6 +4543,12 @@ void
 iperf_free_stream(struct iperf_stream *sp)
 {
     struct iperf_interval_results *irp, *nirp;
+
+    //[HEMA]========
+    if(sp->test->srv_rx_ts){
+        free(sp->result->histo);
+    }
+    //========
 
     /* XXX: need to free interval list too! */
     munmap(sp->buffer, sp->test->settings->blksize);
@@ -4575,6 +4613,13 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
     }
 
     memset(sp->result, 0, sizeof(struct iperf_stream_result));
+    //[HEMA]=================
+    if(test->srv_rx_ts){
+        sp->result->histo = (long unsigned *)calloc(sizeof(long unsigned), test->bins);
+        sp->result->min_lat = UINT_MAX;
+        sp->result->max_lat = 0;
+    }
+    //=======================
     TAILQ_INIT(&sp->result->interval_results);
 
     /* Create and randomize the buffer */
@@ -5257,7 +5302,33 @@ iperf_printf(struct iperf_test *test, const char* format, ...)
 
     return r;
 }
+//[HEMA]==================
+int
+print_histogram(struct iperf_test *test, struct iperf_stream *sp)
+{
 
+    if(test->srv_rx_ts){
+        for(int i = 0; i < test->bins; i++){
+            if(i == 0){
+                printf("|| <%dns ||", test->histo_limits[i]);
+            }else if (i == test->bins-1){
+                printf(" >=%dns ||", test->histo_limits[i-1]);
+            }else{
+                printf(" %dns<= x <%dns ||", test->histo_limits[i-1], test->histo_limits[i]);
+            }
+        }
+        printf("\n");
+        for(int i = 0; i < test->bins; i++){
+            printf("||  %lu ||", sp->result->histo[i]);
+        }
+        printf("\n");
+        printf("Min:\t%lu\nMax:\t%lu\n", sp->result->min_lat, sp->result->max_lat);
+    }
+    
+    return 0;
+
+}
+//=======================
 int
 iflush(struct iperf_test *test)
 {

@@ -82,7 +82,36 @@ iperf_tcp_recv(struct iperf_stream *sp)
 
     return r;
 }
+//[HEMA]=========================
+/* iperf_tcp_recvmsg
+ *
+ * receives the data for TCP, while also reading timestamps
+ */
+int
+iperf_tcp_recvmsg(struct iperf_stream *sp)
+{
+    int r;
 
+    r = Nread_with_recvmsg(sp->socket, sp->buffer, sp->settings->blksize, Ptcp, sp->test->bin_granularity, sp->test->bins, sp->result->histo, &sp->result->min_lat, &sp->result->max_lat);
+
+	if(sp->test->debug)	printf("Received %d bytes\n", r);
+
+    if (r < 0)
+        return r;
+
+    /* Only count bytes received while we're in the correct state. */
+    if (sp->test->state == TEST_RUNNING) {
+	sp->result->bytes_received += r;
+	sp->result->bytes_received_this_interval += r;
+    }
+    else {
+	if (sp->test->debug)
+	    printf("Late receive, state = %d-%s\n", sp->test->state, state_to_text(sp->test->state));
+    }
+
+    return r;
+}
+//=====================================
 
 /* iperf_tcp_send
  *
@@ -157,12 +186,13 @@ iperf_tcp_accept(struct iperf_test * test)
 
 		int ts;
 
-		ts = SOF_TIMESTAMPING_RX_SOFTWARE;
+		ts = SOF_TIMESTAMPING_RX_SOFTWARE | SOF_TIMESTAMPING_SOFTWARE;
 
 		if (test->debug) {
 			printf("Enabling RX Timestamps on new connection\n");
 		}
 		if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPING_NEW, &ts, sizeof(ts)) < 0) {
+		//if (setsockopt(s, SOL_SOCKET, SO_TIMESTAMPNS_NEW, NULL, 0) < 0) {
 
 			warning("Unable to set RX timestamping");
 		}

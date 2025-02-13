@@ -512,6 +512,12 @@ iperf_strerror(int int_errno)
             snprintf(errstr, len, "unable to destroy thread attributes");
             perr = 1;
             break;
+    //[HEMA]=================
+	case IERXTS:
+            snprintf(errstr, len, "unable to create histogram due to invalid parameters");
+            perr = 1;
+            break;
+    //===========================
 	default:
 	    snprintf(errstr, len, "int_errno=%d", int_errno);
 	    perr = 1;

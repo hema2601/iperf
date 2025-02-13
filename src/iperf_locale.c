@@ -154,7 +154,8 @@ const char usage_longstr[] = "Usage: iperf3 [-s|-c host] [options]\n"
                            "  --use-pkcs1-padding       use pkcs1 padding at your own risk\n"
 #endif //HAVE_SSL
                           //[HEMA]============
-                           "  --server-rx-timestamp     Activate RX timestamp collection on server\n"
+                           "  --server-rx-timestamp n,m Activate RX timestamp collection on server\n"
+                           "                            and save them in a histogram of n bins with an m granularity\n"
                            //=====================
 						   "Client specific:\n"
                            "  -c, --client <host>[%%<dev>] run in client mode, connecting to <host>\n"

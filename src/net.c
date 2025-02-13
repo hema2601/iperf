@@ -65,6 +65,11 @@
 #include "net.h"
 #include "timer.h"
 
+//[HEMA]============
+//#include <linux/timekeeping.h>
+#include <linux/errqueue.h>
+//=================
+
 static int nread_read_timeout = 10;
 static int nread_overall_timeout = 30;
 
@@ -478,6 +483,87 @@ Nread_no_select(int fd, char *buf, size_t count, int prot)
     }
     return count - nleft;
 }
+//[HEMA]==========================
+/**********************************************************************/
+/* reads 'count' bytes from a socket using recvmsg to read timestamps */
+/**********************************************************************/
+int
+Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, unsigned int histo_gran, int bins, long unsigned *histo, long unsigned *min, long unsigned *max)
+{
+    register ssize_t r;
+    register size_t nleft = count;
+
+	const int CMSG_SIZE = 1024;
+
+	struct scm_timestamping *ts;
+	struct timespec new_ts;
+	char cmsg_buf[CMSG_SIZE];
+	struct iovec recv_iov;
+	struct cmsghdr *cmsg;
+	struct msghdr hdr;
+	int flags = 0;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.msg_iov = &recv_iov;
+	hdr.msg_iovlen = 1;
+	recv_iov.iov_base = buf;
+	recv_iov.iov_len = count;
+
+	hdr.msg_control = cmsg_buf;
+	hdr.msg_controllen = sizeof(cmsg_buf);
+
+    while (nleft > 0) {
+		recv_iov.iov_base = buf;
+		recv_iov.iov_len = nleft;
+		r = recvmsg(fd, &hdr, flags);
+        
+	for (cmsg = CMSG_FIRSTHDR(&hdr); cmsg != NULL;
+	     cmsg = CMSG_NXTHDR(&hdr, cmsg)) {
+		if (cmsg->cmsg_level != SOL_SOCKET){
+			continue;
+		}
+		switch (cmsg->cmsg_type) {
+		case SO_TIMESTAMPING_NEW:
+			ts = (struct scm_timestamping *)CMSG_DATA(cmsg);
+			clock_gettime(CLOCK_REALTIME, &new_ts);
+            long unsigned diff; 
+            if(new_ts.tv_nsec < ts->ts[0].tv_nsec ){
+                diff = 1000000000U - ts->ts[0].tv_nsec + new_ts.tv_nsec + ((new_ts.tv_sec - ts->ts[0].tv_sec - 1) * 1000000000U);
+            }else{
+                diff =  new_ts.tv_nsec - ts->ts[0].tv_nsec + ((new_ts.tv_sec - ts->ts[0].tv_sec) * 1000000000U);
+            }
+ 
+            if(diff > *max) *max = diff;        
+            if(diff < *min) *min = diff;        
+
+            int idx = diff / histo_gran;
+
+            histo[(idx < bins) ? idx : bins-1]++;
+
+			break;
+		default:
+            break;
+		}
+	}
+
+
+		if (r < 0) {
+            /* XXX EWOULDBLOCK can't happen without non-blocking sockets */
+            if (errno == EINTR || errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
+            else
+                return NET_HARDERROR;
+        } else if (r == 0)
+            break;
+
+        nleft -= r;
+        buf += r;
+		
+
+    }
+    return count - nleft;
+}
+//==================
 
 
 /*

@@ -46,6 +46,15 @@ int iperf_tcp_accept(struct iperf_test *);
 int iperf_tcp_recv(struct iperf_stream *);
 
 
+//[HEMA]====================
+/**
+ * iperf_tcp_recvmsg -- receives the data for TCP
+ * and the Param/result message exchange
+ *returns state of packet received
+ *
+ */
+int iperf_tcp_recvmsg(struct iperf_stream *);
+//====================
 /**
  * iperf_tcp_send -- sends the client data for TCP
  * and the  Param/result message exchanges

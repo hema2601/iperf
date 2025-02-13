@@ -33,6 +33,9 @@ int netdial(int domain, int proto, const char *local, const char *bind_dev, int 
 int netannounce(int domain, int proto, const char *local, const char *bind_dev, int port);
 int Nread(int fd, char *buf, size_t count, int prot);
 int Nread_no_select(int fd, char *buf, size_t count, int prot);
+//[HEMA]==============
+int Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, unsigned int histo_gran, int bins, long unsigned *histo, long unsigned *min, long unsigned *max);
+//====================
 int Nwrite(int fd, const char *buf, size_t count, int prot) /* __attribute__((hot)) */;
 int has_sendfile(void);
 int Nsendfile(int fromfd, int tofd, const char *buf, size_t count) /* __attribute__((hot)) */;
