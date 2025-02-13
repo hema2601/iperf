@@ -4137,16 +4137,22 @@ iperf_print_results(struct iperf_test *test)
                 unit_snprintf(nbuf, UNIT_LEN, bandwidth, test->settings->unit_format);
                 if (test->protocol->id == Ptcp || test->protocol->id == Psctp) {
                     /* Receiver summary, TCP and SCTP */
-                    if (test->json_output)
-                        cJSON_AddItemToObject(json_summary_stream, report_receiver, iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f sender: %b", (int64_t) sp->socket, (double) start_time, (double) receiver_time, (double) end_time, (int64_t) bytes_received, bandwidth * 8, stream_must_be_sender));
-                    else
+                    if (test->json_output){
+                        //[HEMA]================================
+                        cJSON *tmp = iperf_json_printf("socket: %d  start: %f  end: %f  seconds: %f  bytes: %d  bits_per_second: %f sender: %b", (int64_t) sp->socket, (double) start_time, (double) receiver_time, (double) end_time, (int64_t) bytes_received, bandwidth * 8, stream_must_be_sender);
+                        cJSON_AddItemToObject(tmp, "rx_ts_histogram", (cJSON*)print_histogram_json(test, sp));
+                        cJSON_AddItemToObject(json_summary_stream,  report_receiver, tmp);
+                        //===========================
+                   }else
                         if (test->role == 's' && sp->sender) {
                             if (test->verbose)
                                 iperf_printf(test, report_receiver_not_available_format, sp->socket);
                         }
                         else {
                             iperf_printf(test, report_bw_format, sp->socket, mbuf, start_time, receiver_time, ubuf, nbuf, report_receiver);
+                            //[HEMA]==============
                             print_histogram(test, sp);
+                            //====================
                         }
                 }
                 else {
@@ -5323,10 +5329,31 @@ print_histogram(struct iperf_test *test, struct iperf_stream *sp)
         }
         printf("\n");
         printf("Min:\t%lu\nMax:\t%lu\n", sp->result->min_lat, sp->result->max_lat);
-    }
+    }   
     
     return 0;
 
+}
+void*
+print_histogram_json(struct iperf_test *test, struct iperf_stream *sp)
+{
+
+    if(test->srv_rx_ts){
+        cJSON *histo = iperf_json_printf("bin_num: %d granularity: %d min: %d max: %d", test->bins, test->bin_granularity, sp->result->min_lat, sp->result->max_lat);
+
+        cJSON *bins = cJSON_CreateArray(); 
+
+        for(int i = 0; i < test->bins; i++){
+
+            cJSON_AddItemToArray(bins, iperf_json_printf("start: %d end: %d count: %d", (i==0)?0:test->histo_limits[i-1], (i==test->bins-1)?INT_MAX:test->histo_limits[i], sp->result->histo[i]));
+
+        }
+
+        cJSON_AddItemToObject(histo, "bins", bins);
+
+        return (void*)histo;
+    }
+    return NULL;
 }
 //=======================
 int

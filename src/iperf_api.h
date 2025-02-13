@@ -383,6 +383,7 @@ int iperf_printf(struct iperf_test *test, const char *format, ...) __attribute__
 int iflush(struct iperf_test *test);
 //[HEMA]================
 int print_histogram(struct iperf_test *test, struct iperf_stream *sp);
+void* print_histogram_json(struct iperf_test *test, struct iperf_stream *sp);
 //====================
 
 
