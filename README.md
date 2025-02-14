@@ -35,23 +35,67 @@ The iperf implementation does not make any necessary checks on whether your kern
 It is supported since Linux 4.12 according to https://man7.org/linux/man-pages/man7/socket.7.html .
 
 
-Server RX Packet Timestamps (Work in Progress)
+Server RX Packet Timestamps 
 ---------------------------
 
 This introduces a new flag:
 
-    --server-rx-timestamp        Activate RX timestamp collection on server
+    --server-rx-timestamp n,m        Activate RX timestamp collection on server
+                                     and save them in a histogram of n bins with an m granularity
 
 As the description says, it activates timestamping RX timestamps using SOF_TIMESTAMPING_RX_SOFTWARE.
 These timestamps are taken just before a packet enters the network stack (Check for net_timestamp_check() in your kernel for the exact positions).
 
 More on timestamping: https://docs.kernel.org/networking/timestamping.html
 
-So far, the timestamps are not yet collected. Work in Progress.
+Whenever a packet is received by the app, the time it took for the packet to reach the application after entering the stack is stored in a histogram.
+The dimensions of the histogram are defined by the user.
 
+Latency data is collected per connection.
 
+The histogram data can either be read from the json (with the --json option), or it can be taken from the server output.
+An example output is shown below.
 
+    [...]
+    
+    [ ID] Interval           Transfer     Bitrate
+    [  5]   0.00-10.00  sec  29.8 GBytes  25.6 Gbits/sec                  receiver
+                  LATENCY |                COUNT |
+           0 -    5000 ns |                   60 |
+        5000 -   10000 ns |                65533 |
+       10000 -   15000 ns |               400879 |
+       15000 -   20000 ns |               222325 |
+       20000 -   25000 ns |                59083 |
+       25000 -   30000 ns |                 6966 |
+       30000 -   35000 ns |                 1497 |
+       35000 -   40000 ns |                  592 |
+       40000 -   45000 ns |                  322 |
+       45000 -   50000 ns |                  230 |
+       50000 -   55000 ns |                  193 |
+       55000 -   60000 ns |                  125 |
+       60000 -   65000 ns |                  109 |
+       65000 -   70000 ns |                  111 |
+       70000 -     ... ns |                 6095 |
 
+    LATENCY STATS (in ns)
+       Timestamps Taken:	              764120
+               Avg Time:	        17687.148483
+               Min Time:	                3934
+               Max Time:	             1462427
+ 
+    [...]
+
+This was run using the flag
+
+    --server-rx-timestamp 15,5000
+
+Support for timestamps other than SOF_TIMESTAMPIN_RX_SOFTWARE is not planned for now.
+
+Again, this custom iperf will not check whether your current kernel can support the required timestamping options.
+
+---
+
+Below is the original iperf README
 
 iperf3:  A TCP, UDP, and SCTP network bandwidth measurement tool
 ================================================================
