@@ -5322,21 +5322,23 @@ print_histogram(struct iperf_test *test, struct iperf_stream *sp)
 {
 
     if(test->srv_rx_ts){
+
+        printf("%22s|%22s|\n", " LATENCY ", " COUNT ");
+        
         for(int i = 0; i < test->bins; i++){
             if(i == 0){
-                printf("|| <%dns ||", test->histo_limits[i]);
+                printf(" %7d - %7d ns |", 0, test->histo_limits[i]);
             }else if (i == test->bins-1){
-                printf(" >=%dns ||", test->histo_limits[i-1]);
+                printf(" %7d - %7s ns |", test->histo_limits[i-1], "...");
             }else{
-                printf(" %dns<= x <%dns ||", test->histo_limits[i-1], test->histo_limits[i]);
+                printf(" %7d - %7d ns |", test->histo_limits[i-1], test->histo_limits[i]);
             }
+            
+            printf(" %20lu |\n", sp->result->histo->bins[i]);
         }
         printf("\n");
-        for(int i = 0; i < test->bins; i++){
-            printf("||  %lu ||", sp->result->histo->bins[i]);
-        }
-        printf("\n");
-        printf("Min:\t%lu\nMax:\t%lu\n", sp->result->histo->min, sp->result->histo->max);
+        printf("LATENCY STATS (in ns)\n");
+        printf("%20s\t%20lu\n%20s\t%20lf\n%20s\t%20lu\n%20s\t%20lu\n\n", "Timestamps Taken:", sp->result->histo->total, "Avg Time:",  sp->result->histo->avg , "Min Time:", sp->result->histo->min, "Max Time:", sp->result->histo->max);
     }   
     
     return 0;
