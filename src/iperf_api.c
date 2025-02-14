@@ -5347,7 +5347,7 @@ print_histogram_json(struct iperf_test *test, struct iperf_stream *sp)
 {
 
     if(test->srv_rx_ts){
-        cJSON *histo = iperf_json_printf("bin_num: %d granularity: %d min: %d max: %d avg: %f total %d", test->bins, test->bin_granularity, sp->result->histo->min, sp->result->histo->max, sp->result->histo->avg, sp->result->histo->total);
+        cJSON *histo = iperf_json_printf("bin_num: %d granularity: %d min: %d max: %d avg: %f total: %d", test->bins, test->bin_granularity, sp->result->histo->min, sp->result->histo->max, sp->result->histo->avg, sp->result->histo->total);
 
         cJSON *bins = cJSON_CreateArray(); 
 
