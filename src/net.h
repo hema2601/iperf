@@ -34,7 +34,7 @@ int netannounce(int domain, int proto, const char *local, const char *bind_dev, 
 int Nread(int fd, char *buf, size_t count, int prot);
 int Nread_no_select(int fd, char *buf, size_t count, int prot);
 //[HEMA]==============
-int Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, unsigned int histo_gran, int bins, long unsigned *histo, long unsigned *min, long unsigned *max);
+int Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, struct iperf_histogram *histo);
 //====================
 int Nwrite(int fd, const char *buf, size_t count, int prot) /* __attribute__((hot)) */;
 int has_sendfile(void);

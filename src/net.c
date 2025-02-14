@@ -488,7 +488,7 @@ Nread_no_select(int fd, char *buf, size_t count, int prot)
 /* reads 'count' bytes from a socket using recvmsg to read timestamps */
 /**********************************************************************/
 int
-Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, unsigned int histo_gran, int bins, long unsigned *histo, long unsigned *min, long unsigned *max)
+Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, struct iperf_histogram *histo)
 {
     register ssize_t r;
     register size_t nleft = count;
@@ -533,12 +533,15 @@ Nread_with_recvmsg(int fd, char *buf, size_t count, int prot, unsigned int histo
                 diff =  new_ts.tv_nsec - ts->ts[0].tv_nsec + ((new_ts.tv_sec - ts->ts[0].tv_sec) * 1000000000U);
             }
  
-            if(diff > *max) *max = diff;        
-            if(diff < *min) *min = diff;        
+            if(diff > histo->max) histo->max = diff;        
+            if(diff < histo->min) histo->min = diff;        
 
-            int idx = diff / histo_gran;
+            histo->avg = (histo->total * histo->avg + diff) / (histo->total+1);
+            histo->total++;
 
-            histo[(idx < bins) ? idx : bins-1]++;
+            int idx = diff / histo->granularity;
+
+            histo->bins[(idx < histo->num_bins) ? idx : histo->num_bins-1]++;
 
 			break;
 		default:

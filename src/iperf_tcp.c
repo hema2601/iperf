@@ -92,7 +92,7 @@ iperf_tcp_recvmsg(struct iperf_stream *sp)
 {
     int r;
 
-    r = Nread_with_recvmsg(sp->socket, sp->buffer, sp->settings->blksize, Ptcp, sp->test->bin_granularity, sp->test->bins, sp->result->histo, &sp->result->min_lat, &sp->result->max_lat);
+    r = Nread_with_recvmsg(sp->socket, sp->buffer, sp->settings->blksize, Ptcp, sp->result->histo);
 
 	if(sp->test->debug)	printf("Received %d bytes\n", r);
 

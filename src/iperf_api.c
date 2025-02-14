@@ -4552,6 +4552,7 @@ iperf_free_stream(struct iperf_stream *sp)
 
     //[HEMA]========
     if(sp->test->srv_rx_ts){
+        free(sp->result->histo->bins);
         free(sp->result->histo);
     }
     //========
@@ -4621,9 +4622,16 @@ iperf_new_stream(struct iperf_test *test, int s, int sender)
     memset(sp->result, 0, sizeof(struct iperf_stream_result));
     //[HEMA]=================
     if(test->srv_rx_ts){
-        sp->result->histo = (long unsigned *)calloc(sizeof(long unsigned), test->bins);
-        sp->result->min_lat = UINT_MAX;
-        sp->result->max_lat = 0;
+        struct iperf_histogram *new_histo = (struct iperf_histogram*)malloc(sizeof(struct iperf_histogram));
+        new_histo->granularity = test->bin_granularity;
+        new_histo->num_bins = test->bins;
+        new_histo->bins = (long unsigned *)calloc(sizeof(long unsigned), test->bins);
+        new_histo->min = UINT_MAX;
+        new_histo->max = 0;
+        new_histo->avg = 0;
+        new_histo->total = 0;
+
+        sp->result->histo = new_histo;
     }
     //=======================
     TAILQ_INIT(&sp->result->interval_results);
@@ -5325,10 +5333,10 @@ print_histogram(struct iperf_test *test, struct iperf_stream *sp)
         }
         printf("\n");
         for(int i = 0; i < test->bins; i++){
-            printf("||  %lu ||", sp->result->histo[i]);
+            printf("||  %lu ||", sp->result->histo->bins[i]);
         }
         printf("\n");
-        printf("Min:\t%lu\nMax:\t%lu\n", sp->result->min_lat, sp->result->max_lat);
+        printf("Min:\t%lu\nMax:\t%lu\n", sp->result->histo->min, sp->result->histo->max);
     }   
     
     return 0;
@@ -5339,13 +5347,13 @@ print_histogram_json(struct iperf_test *test, struct iperf_stream *sp)
 {
 
     if(test->srv_rx_ts){
-        cJSON *histo = iperf_json_printf("bin_num: %d granularity: %d min: %d max: %d", test->bins, test->bin_granularity, sp->result->min_lat, sp->result->max_lat);
+        cJSON *histo = iperf_json_printf("bin_num: %d granularity: %d min: %d max: %d avg: %f total %d", test->bins, test->bin_granularity, sp->result->histo->min, sp->result->histo->max, sp->result->histo->avg, sp->result->histo->total);
 
         cJSON *bins = cJSON_CreateArray(); 
 
         for(int i = 0; i < test->bins; i++){
 
-            cJSON_AddItemToArray(bins, iperf_json_printf("start: %d end: %d count: %d", (i==0)?0:test->histo_limits[i-1], (i==test->bins-1)?INT_MAX:test->histo_limits[i], sp->result->histo[i]));
+            cJSON_AddItemToArray(bins, iperf_json_printf("start: %d end: %d count: %d", (i==0)?0:test->histo_limits[i-1], (i==test->bins-1)?test->histo_limits[i-1]+test->bin_granularity:test->histo_limits[i], sp->result->histo->bins[i]));
 
         }
 

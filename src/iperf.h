@@ -128,6 +128,20 @@ struct iperf_interval_results
     long pmtu;
 };
 
+//[HEMA]=======
+struct iperf_histogram
+{
+	long unsigned *bins;
+	int num_bins;
+	int granularity;
+	long unsigned min;
+	long unsigned max;
+	double avg;
+	long unsigned total;
+
+};
+//============
+
 struct iperf_stream_result
 {
     atomic_iperf_size_t bytes_received;
@@ -149,8 +163,9 @@ struct iperf_stream_result
     double sender_time;
     double receiver_time;
 	//[HEMA]=============
-	long unsigned int *histo;
-	long unsigned min_lat, max_lat;
+	struct iperf_histogram *histo;
+	//long unsigned int *histo;
+	//long unsigned min_lat, max_lat;
 	//===================
     TAILQ_HEAD(irlisthead, iperf_interval_results) interval_results;
     void     *data;
